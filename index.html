@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Estimating π</title>
+  <meta name="description" content="Drop matches on a floor with lines one match-length apart. The share that land across a line is 2/π. An interactive Buffon's needle simulation, with sound.">
+  <meta name="theme-color" content="#0f0508">
+  <meta property="og:title" content="Estimating π">
+  <meta property="og:description" content="Drop matches on a lined floor and count the ones that cross a line. Out comes π.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a0a0e'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-style='italic' font-size='40' text-anchor='middle' fill='%23f5c062'%3E%CF%80%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app" id="top">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="π estimator, back to top">
+        <span class="brand-e">π</span><span class="brand-word">estimator</span>
+      </a>
+      <nav class="topnav">
+        <div class="viewtoggle" role="group" aria-label="Chart view (V)">
+          <button type="button" data-view="floor" class="is-on" aria-pressed="true">Floor</button><button type="button" data-view="trace" aria-pressed="false">Average</button>
+        </div>
+        <a class="toplink" href="#math">Why π?</a>
+        <button id="btnSound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound on (M)" title="Sound (M)">
+          <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.2 6.4a8.2 8.2 0 0 1 0 11.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <h1 class="caption">
+      <span class="cap is-on" data-cap="0"><span>Drop matches on a floor with lines<br>exactly one match-length apart.</span></span>
+      <span class="cap" data-cap="1"><span>What share of the matches<br>land across a line?</span></span>
+      <span class="cap" data-cap="2"><span>A match crosses a line <span class="gold">2/π</span> of the time,<br>so 2 × drops ÷ crossings → <span class="gold">π</span></span></span>
+    </h1>
+
+    <section class="stage" id="stageWrap" aria-label="Simulation. Click to drop a match.">
+      <canvas id="stageGlow" class="glow" aria-hidden="true"></canvas>
+      <canvas id="stage" class="sharp" role="img" aria-label="Matches lying on a floor of parallel lines; matches that cross a line are gold."></canvas>
+      <div class="stage-hint" id="stageHint">
+        <p>Each match lands at a random spot and a random angle.<br>Count the ones that end up across a line.</p>
+        <p class="stage-hint-cta">Tap here or press <kbd>Space</kbd></p>
+      </div>
+      <div class="trial-pill" id="trialPill" aria-hidden="true"></div>
+      <div class="offby" id="offby" aria-hidden="true">
+        <b id="offbyVal">off by 0.00000</b>
+        <span id="offbyAfter">after 0 matches</span>
+      </div>
+    </section>
+
+    <section class="readout">
+      <div class="avg is-empty" id="avg">—</div>
+      <div class="avg-sub" id="avgSub">the estimate of π will show up here</div>
+      <div class="avg-e" id="avgE">π = 3.14159265…</div>
+    </section>
+
+    <section class="hist space" aria-label="Every match as a dot: its angle against its distance to the nearest line">
+      <canvas id="spaceGlow" class="glow" aria-hidden="true"></canvas>
+      <canvas id="space" class="sharp" role="img" aria-label="Dots under the curve x equals one half sine theta are matches that cross a line. Their share of the box tends to 2 over pi."></canvas>
+      <span class="hist-title">every match as a dot</span>
+      <span class="hist-marks is-on" id="spaceShare"></span>
+    </section>
+
+    <div class="dock" role="toolbar" aria-label="Controls">
+      <div class="dock-main">
+        <button id="btnAdd" class="btn primary" type="button" title="Drop one match (Space)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 17 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="18" cy="6" r="2.6" fill="currentColor"/></svg>
+          <span>Drop<span class="wide-only"> a match</span></span>
+        </button>
+        <button id="btnTen" class="btn" type="button" title="Drop ten matches (D)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15 11 8M9 19l7-7M14 17l6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Drop 10</span>
+        </button>
+        <button id="btnRun" class="btn run" type="button" title="Run / pause (Enter)">
+          <svg class="ico-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
+          <svg class="ico-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z" fill="currentColor"/></svg>
+          <span id="runLabel">Run</span>
+        </button>
+        <button id="btnReset" class="btn ghost icon-only" type="button" title="Reset (R)" aria-label="Reset">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4.5 4.5v4.5H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="dock-speed">
+        <label class="speed-label" for="speed">Speed</label>
+        <input id="speed" type="range" min="0" max="1000" step="1" value="80" aria-describedby="speedVal">
+        <output id="speedVal" for="speed">2.0 matches/s</output>
+        <label class="chip" title="Speed up automatically while running">
+          <input id="accel" type="checkbox" checked>
+          <span>auto<span class="wide-only">-accelerate</span></span>
+        </label>
+      </div>
+    </div>
+
+    <p class="sr-only" id="srStatus" aria-live="polite"></p>
+  </main>
+
+  <section class="notebook" id="math" aria-labelledby="mathTitle">
+    <div class="nb-paper">
+      <div class="nb-rings" aria-hidden="true"></div>
+
+      <header class="nb-head">
+        <p class="hand hand-title" lang="ro">Acul lui Buffon</p>
+        <h2 id="mathTitle">Why the matches find <span class="gold">π</span></h2>
+        <p class="lede">Buffon's needle (1777), worked through step by step, from my notes for Alexandru Negrescu's course <em>Mathematics for Understanding AI</em>. The panel under the big number above is the picture behind step 3.</p>
+      </header>
+
+      <ol class="steps">
+        <li class="step">
+          <h3>The experiment</h3>
+          <p>Lines are drawn a distance \(d\) apart and the matches have length \(\ell \le d\); here \(\ell = d\). For a dropped match, let \(x\) be the distance from its middle to the nearest line and \(\theta\) the angle it makes with the lines. A fair drop makes them independent and uniform:</p>
+          $$x \sim \mathcal{U}\!\left[0, \tfrac{d}{2}\right], \qquad \theta \sim \mathcal{U}\!\left[0, \tfrac{\pi}{2}\right]$$
+          <figure class="sketches">
+            <div class="sketch sketch-wide">
+              <svg viewBox="0 0 300 180" role="img" aria-label="Two parallel lines a distance d apart. A match crosses the lower line. Its middle is a distance x above that line and it makes an angle theta with it.">
+                <path d="M20 30 H290 M20 150 H290" class="sk-axis" />
+                <path d="M34 30 V150 M29 30 H39 M29 150 H39" class="sk-edge" />
+                <text x="42" y="96" class="sk-t">d</text>
+                <path d="M104 163.6 L196 86.4" class="sk-ink sk-match" />
+                <circle cx="196" cy="86.4" r="4.5" class="sk-head" />
+                <circle cx="150" cy="125" r="3" class="sk-dot" />
+                <path d="M150 125 V150" class="sk-edge sk-dash" />
+                <text x="155" y="143" class="sk-t">x</text>
+                <path d="M98.2 150 A22 22 0 0 0 103.3 164.1" class="sk-ink sk-thin" />
+                <text x="80" y="170" class="sk-t">θ</text>
+                <path d="M216 86.4 V125 M211 86.4 H221 M211 125 H221" class="sk-edge" />
+                <text x="225" y="112" class="sk-t">½ℓ sin θ</text>
+              </svg>
+              <figcaption>The match reaches <span class="hand">½ℓ sin θ</span> above and below its middle.</figcaption>
+            </div>
+          </figure>
+          <p class="hand note" lang="ro">chibrituri aruncate la întâmplare pe o podea cu linii paralele</p>
+        </li>
+
+        <li class="step">
+          <h3>When does it cross?</h3>
+          <p>The match reaches \(\tfrac{\ell}{2}\sin\theta\) above and below its middle, so it lands across a line exactly when that reach is at least the distance to the nearest line:</p>
+          $$\text{crosses} \iff x \le \frac{\ell}{2}\sin\theta$$
+        </li>
+
+        <li class="step">
+          <h3>Probability is an area</h3>
+          <p>The pair \((\theta, x)\) is uniform on a box of area \(\frac{\pi}{2}\cdot\frac{d}{2}\). The crossing drops are the ones under the curve \(x = \frac{\ell}{2}\sin\theta\), so</p>
+          $$\begin{aligned} P(\text{cross}) &= \frac{1}{\frac{\pi}{2}\cdot\frac{d}{2}}\int_0^{\pi/2} \frac{\ell}{2}\sin\theta \, d\theta \\ &= \frac{4}{\pi d}\cdot\frac{\ell}{2}\Big[-\cos\theta\Big]_0^{\pi/2} = \frac{2\ell}{\pi d} \end{aligned}$$
+          <p>That is the panel under the big number: every match becomes a dot at \((\theta, x)\), the gold ones sit under the sine curve, and the gold share of the box heads to \(2/\pi \approx 63.66\%\).</p>
+          <p class="hand note" lang="ro">probabilitatea = aria de sub curbă ÷ aria dreptunghiului</p>
+        </li>
+
+        <li class="step">
+          <h3>Turn it around</h3>
+          <p>With \(\ell = d\) the crossing probability is \(2/\pi\). Drop \(n\) matches and count \(C\) crossings. By the strong law of large numbers \(C/n \to 2/\pi\) almost surely, so</p>
+          $$\hat\pi_n = \frac{2n}{C} \;\xrightarrow{\text{a.s.}}\; \pi$$
+          <p>That's the big number above: two times the drops, divided by the crossings.</p>
+        </li>
+
+        <li class="step">
+          <h3>No π hidden inside</h3>
+          <p>Picking \(\theta\) uniformly from \([0, \pi/2]\) would need π, which would be cheating. Instead, the simulation picks a point \((a, b)\) uniformly in the square \([-1, 1]^2\), throws it away unless \(a^2 + b^2 \le 1\), and points the match along \((a, b)\). Points inside a circle face every direction equally. With \(\sin\theta = |b|/\sqrt{a^2+b^2}\) and \(\ell = 1\), the crossing test becomes</p>
+          $$x^2\,(a^2 + b^2) \le \tfrac14\, b^2$$
+          <p>which only needs multiplication. π appears only when drawing the reference line and the 0°–90° axis, never in the estimate.</p>
+          <p class="hand note">side note: the share of points kept is π/4, which is another way to estimate π</p>
+        </li>
+
+        <li class="step">
+          <h3>How close should it get?</h3>
+          <p>The estimate is 2 divided by a sample proportion, so its typical error is about \(\frac{\pi^2}{2}\sqrt{\frac{p(1-p)}{n}} \approx 2.37/\sqrt{n}\) with \(p = 2/\pi\):</p>
+          <div class="table-wrap">
+            <table class="odds error">
+              <thead><tr><th scope="col">matches</th><th scope="col">100</th><th scope="col">10,000</th><th scope="col">1 million</th><th scope="col">100 million</th></tr></thead>
+              <tbody><tr><th scope="row">typical error</th><td>±0.24</td><td>±0.024</td><td>±0.0024</td><td>±0.00024</td></tr></tbody>
+            </table>
+          </div>
+          <p>Each extra correct decimal costs 100 times more matches. After 100 million matches, expect around four correct decimals.</p>
+        </li>
+
+        <li class="step">
+          <h3>Lazzarini's lucky throw</h3>
+          <p>In 1901 Mario Lazzarini reported 3,408 drops with \(\ell/d = 5/6\) and 1,808 crossings:</p>
+          $$\begin{aligned} \hat\pi &= \frac{2\ell}{d}\cdot\frac{n}{C} = \frac{5}{3}\cdot\frac{3408}{1808} \\ &= \frac{355}{113} = 3.1415929\ldots \end{aligned}$$
+          <p>That is correct to six decimals. With 3,408 drops the typical error is about ±0.05, so landing that close by chance is extremely unlikely. 355/113 is a famous fraction for π, and most likely the experiment was stopped, or the counts chosen, to land on it.</p>
+          <p class="yours" id="yours">Drop 3,408 matches above (a run gets there in about 15 seconds) and your result shows up here.</p>
+          <p class="hand note" lang="ro">prea frumos ca să fie adevărat</p>
+        </li>
+      </ol>
+
+      <a class="back" href="#top">↑ Back to the simulation</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Maths from <em>Mathematics for Understanding AI</em>, a course by Alexandru Negrescu.</p>
+    <p>Plain HTML, canvas and the Web Audio API. Every sound is synthesized live, no audio files. Maths typeset with KaTeX.</p>
+    <p class="keys"><kbd>Space</kbd> drop a match · <kbd>D</kbd> drop 10 · <kbd>Enter</kbd> run/pause · <kbd>V</kbd> switch view · <kbd>M</kbd> sound · <kbd>R</kbd> reset</p>
+  </footer>
+
+  <script src="js/audio.js"></script>
+  <script src="js/app.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.getElementById('math'),{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false})"></script>
+</body>
+</html>
